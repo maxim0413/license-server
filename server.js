@@ -11,10 +11,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+// test route
 app.get("/", (req, res) => {
   res.send("License server online");
 });
 
+// 🔥 BELANGRIJK: deze route ontbrak bij jou
 app.get("/check-key", async (req, res) => {
   const { key, hwid } = req.query;
 
@@ -44,4 +46,4 @@ app.get("/check-key", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on port " + PORT));
+app.listen(PORT, () => console.log("Server running"));
