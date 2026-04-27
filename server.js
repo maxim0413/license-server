@@ -1,49 +1,57 @@
-const express = require("express");
-const cors = require("cors");
-const { createClient } = require("@supabase/supabase-js");
+import express from "express";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
 
-// test route
 app.get("/", (req, res) => {
   res.send("License server online");
 });
 
-// 🔥 BELANGRIJK: deze route ontbrak bij jou
+// 🔴 DIT IS WAT JIJ MIST
 app.get("/check-key", async (req, res) => {
   const { key, hwid } = req.query;
 
-  if (!key || !hwid) return res.send("missing");
+  if (!key || !hwid) {
+    return res.json({ valid: false, reason: "missing params" });
+  }
 
-  const { data: license } = await supabase
+  const { data, error } = await supabase
     .from("licenses")
     .select("*")
     .eq("license_key", key)
     .single();
 
-  if (!license) return res.send("invalid");
-  if (!license.active) return res.send("invalid");
+  if (!data) {
+    return res.json({ valid: false, reason: "not found" });
+  }
 
-  if (!license.hwid) {
+  if (!data.active) {
+    return res.json({ valid: false, reason: "inactive" });
+  }
+
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    return res.json({ valid: false, reason: "expired" });
+  }
+
+  // HWID lock
+  if (!data.hwid) {
     await supabase
       .from("licenses")
       .update({ hwid })
-      .eq("license_key", key);
-
-    return res.send("valid");
+      .eq("id", data.id);
+  } else if (data.hwid !== hwid) {
+    return res.json({ valid: false, reason: "hwid mismatch" });
   }
 
-  if (license.hwid !== hwid) return res.send("invalid");
-
-  res.send("valid");
+  res.json({ valid: true });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running"));
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});
