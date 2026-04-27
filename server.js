@@ -11,12 +11,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-app.post("/check-key", async (req, res) => {
-  const { key, hwid } = req.body;
+app.get("/", (req, res) => {
+  res.send("License server online");
+});
 
-  if (!key || !hwid) {
-    return res.json({ valid: false, message: "Missing data" });
-  }
+app.get("/check-key", async (req, res) => {
+  const { key, hwid } = req.query;
+
+  if (!key || !hwid) return res.send("missing");
 
   const { data: license } = await supabase
     .from("licenses")
@@ -24,17 +26,8 @@ app.post("/check-key", async (req, res) => {
     .eq("license_key", key)
     .single();
 
-  if (!license) {
-    return res.json({ valid: false, message: "Invalid key" });
-  }
-
-  if (!license.active) {
-    return res.json({ valid: false, message: "Key disabled" });
-  }
-
-  if (license.expires_at && new Date(license.expires_at) < new Date()) {
-    return res.json({ valid: false, message: "Key expired" });
-  }
+  if (!license) return res.send("invalid");
+  if (!license.active) return res.send("invalid");
 
   if (!license.hwid) {
     await supabase
@@ -42,18 +35,12 @@ app.post("/check-key", async (req, res) => {
       .update({ hwid })
       .eq("license_key", key);
 
-    return res.json({ valid: true, message: "Activated" });
+    return res.send("valid");
   }
 
-  if (license.hwid !== hwid) {
-    return res.json({ valid: false, message: "Used on another PC" });
-  }
+  if (license.hwid !== hwid) return res.send("invalid");
 
-  return res.json({ valid: true, message: "Valid" });
-});
-
-app.get("/", (req, res) => {
-  res.send("License server online");
+  res.send("valid");
 });
 
 const PORT = process.env.PORT || 3000;
