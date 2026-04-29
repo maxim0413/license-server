@@ -1,6 +1,3 @@
-app.get("/test", (req, res) => {
-  res.send("werkt");
-});
 const express = require("express");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
@@ -14,24 +11,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+// test root
 app.get("/", (req, res) => {
   res.send("License server online");
 });
 
+// 🔥 BELANGRIJK: jouw key route
 app.get("/check-key", async (req, res) => {
   const { key, hwid } = req.query;
 
   if (!key || !hwid) return res.send("missing");
 
-  const { data: license } = await supabase
+  const { data: license, error } = await supabase
     .from("licenses")
     .select("*")
     .eq("license_key", key)
     .single();
 
-  if (!license) return res.send("invalid");
+  if (error || !license) return res.send("invalid");
   if (!license.active) return res.send("invalid");
 
+  // HWID lock
   if (!license.hwid) {
     await supabase
       .from("licenses")
