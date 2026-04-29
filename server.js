@@ -1,3 +1,6 @@
+app.get("/test", (req, res) => {
+  res.send("werkt");
+});
 const express = require("express");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
